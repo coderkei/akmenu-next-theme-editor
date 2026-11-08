@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <title>AKTheme Studio</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <h1>AKTheme Studio</h1>
+        <span class="tagline">AKMenu-Next, Wood R4 &amp; Acekard theme editor</span>
+      </div>
+      <div class="toolbar">
+        <label>Theme name <input id="theme-name" value="My Theme" /></label>
+        <label>Theme type
+          <select id="flavour">
+            <option value="next" selected>AKMenu-Next</option>
+            <option value="classic">Classic (Wood R4 / Acekard)</option>
+          </select>
+        </label>
+        <button id="undo" type="button" disabled title="Undo (Ctrl+Z)">↶ Undo</button>
+        <button id="redo" type="button" disabled title="Redo (Ctrl+Shift+Z)">↷ Redo</button>
+        <button id="new" type="button">New</button>
+        <button id="import-button" type="button">Import zip</button>
+        <input id="import" type="file" accept=".zip" hidden />
+        <button id="export" type="button" class="primary">Export zip</button>
+      </div>
+    </header>
+    <main class="app">
+      <section class="stage" aria-label="Preview">
+        <div class="stage-bar">
+          <div class="mode-switch" role="radiogroup" aria-label="Clicking the screens">
+            <span>Clicks</span>
+            <label><input type="radio" name="click-mode" value="move" checked /> Move things</label>
+            <label><input type="radio" name="click-mode" value="touch" /> Use the menu</label>
+          </div>
+          <label>Size
+            <select id="preview-size">
+              <option value="fit" selected>Fit</option>
+              <option value="sharp">Sharp (whole pixels)</option>
+              <option value="1">1×</option>
+              <option value="2">2×</option>
+              <option value="3">3×</option>
+              <option value="4">4×</option>
+            </select>
+          </label>
+          <label>Screens
+            <select id="preview-layout">
+              <option value="stacked" selected>Stacked</option>
+              <option value="auto">Auto</option>
+              <option value="side">Side by side</option>
+            </select>
+          </label>
+          <label class="check" title="Bilinear filtering: softer, like some emulators"><input type="checkbox" id="smooth" /> Smooth</label>
+          <button id="screenshot" type="button" title="Save both screens as a picture">Screenshot</button>
+          <details class="more-options">
+            <summary>Preview options</summary>
+            <div class="more-panel">
+              <label>Console
+                <select id="console">
+                  <option value="ds" selected>DS (flashcart)</option>
+                  <option value="dsi">DSi (SD card)</option>
+                </select>
+              </label>
+              <label>Language <select id="language"></select></label>
+              <label>Filelist style
+                <select id="view-mode">
+                  <option value="internal" selected>Internal</option>
+                  <option value="icon">Modern</option>
+                  <option value="list">Old school</option>
+                  <option value="smallIcon">Small Icons</option>
+                </select>
+              </label>
+              <label class="check"><input type="checkbox" id="clock-12h" /> 12-hour clock</label>
+              <label class="check"><input type="checkbox" id="covers" checked /> Game covers</label>
+              <label class="check"><input type="checkbox" id="card-activity" /> Card activity icon</label>
+            </div>
+          </details>
+        </div>
+        <p id="status" role="status" aria-live="polite"></p>
+        <div class="stage-screens">
+          <div id="screens" class="ds" tabindex="0" aria-label="DS screens. Click something to move it; use the keys listed under How to use the preview.">
+            <div class="screen-wrap"><canvas id="screen-top" width="256" height="192" aria-label="Top screen preview"></canvas><div class="move-layer" data-screen="top"></div></div>
+            <div class="screen-wrap"><canvas id="screen-bottom" width="256" height="192" aria-label="Bottom screen preview, tap to use"></canvas><div class="move-layer" data-screen="bottom"></div></div>
+          </div>
+        </div>
+        <div id="ds-buttons" aria-label="DS buttons">
+          <button type="button" data-key="L" title="Q">L</button>
+          <button type="button" data-key="UP" title="↑" aria-label="Up">▲</button>
+          <button type="button" data-key="DOWN" title="↓" aria-label="Down">▼</button>
+          <button type="button" data-key="LEFT" title="←" aria-label="Left">◀</button>
+          <button type="button" data-key="RIGHT" title="→" aria-label="Right">▶</button>
+          <button type="button" data-key="A" title="X or Enter">A</button>
+          <button type="button" data-key="B" title="Z, Esc or Backspace">B</button>
+          <button type="button" data-key="X" title="S">X</button>
+          <button type="button" data-key="Y" title="A">Y</button>
+          <button type="button" data-key="R" title="W">R</button>
+          <button type="button" data-key="START" title="Space">START</button>
+          <button type="button" data-key="SELECT" title="Shift">SELECT</button>
+          <button type="button" id="menu-reset" title="Back to the first screen">Restart</button>
+        </div>
+        <details class="how">
+          <summary>How to use the preview</summary>
+          <p><strong>Clicks: Move things</strong> lets you click or tap something, like the clock or a button, to move it. Drag the round handle (or use the arrow keys; Shift moves 8 pixels). Things with a width and height also get a corner handle to resize them. Press the tick, or just click the next thing you want to move; Esc puts it back. The game list still responds to taps. To move the start menu, open it with the START button below the screens (or Space), then click it.</p>
+          <p><strong>Clicks: Use the menu</strong> makes the bottom screen a touchscreen, just like the DS: every button can be tapped.</p>
+          <p>In either mode you can use the buttons under the screens, or click the screens and use the keyboard: arrows, X or Enter for A, Z or Esc for B, S for X, A for Y, Q and W for L and R, Space for START, Shift for SELECT.</p>
+          <p>It’s drawn the way AKMenu-Next draws it. Game icons, covers and your DS name are stand-ins.</p>
+        </details>
+        <ul id="preview-notes" aria-label="Preview notes"></ul>
+      </section>
+      <aside id="panels" aria-label="Theme settings"></aside>
+    </main>
+    <dialog id="export-check" aria-labelledby="export-check-title">
+      <h2 id="export-check-title">Before you export</h2>
+      <div id="export-check-body"></div>
+      <div class="dialog-buttons">
+        <button type="button" value="cancel" id="export-cancel">Go back</button>
+        <button type="button" value="export" id="export-anyway" class="primary">Export anyway</button>
+      </div>
+    </dialog>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

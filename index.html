@@ -17,19 +17,24 @@
           <label title="Just the main things: pictures, colours and what shows on the screens"><input type="radio" name="editor-mode" value="simple" /> Simple</label>
           <label title="Every setting, size and picture"><input type="radio" name="editor-mode" value="advanced" /> Advanced</label>
         </div>
-        <label>Theme name <input id="theme-name" value="My Theme" /></label>
-        <label>Theme type
-          <select id="flavour">
-            <option value="next" selected>AKMenu-Next</option>
-            <option value="classic">Classic (Wood R4 / Acekard)</option>
-          </select>
-        </label>
-        <button id="undo" type="button" disabled title="Undo (Ctrl+Z)">↶ Undo</button>
-        <button id="redo" type="button" disabled title="Redo (Ctrl+Shift+Z)">↷ Redo</button>
-        <button id="new" type="button">New</button>
-        <button id="import-button" type="button">Import zip</button>
-        <input id="import" type="file" accept=".zip" hidden />
-        <button id="export" type="button" class="primary">Export zip</button>
+        <!-- Inline on desktop; a drop-down behind the ☰ button in the touch layout. -->
+        <div id="toolbar-more" class="toolbar-more">
+          <label>Theme name <input id="theme-name" value="My Theme" /></label>
+          <label>Theme type
+            <select id="flavour">
+              <option value="next" selected>AKMenu-Next</option>
+              <option value="classic">Classic (Wood R4 / Acekard)</option>
+            </select>
+          </label>
+          <button id="new" type="button">New</button>
+          <button id="import-button" type="button">Import zip</button>
+          <input id="import" type="file" accept=".zip" hidden />
+          <button id="layout-toggle" type="button" hidden>Touch layout</button>
+        </div>
+        <button id="undo" type="button" disabled title="Undo (Ctrl+Z)" aria-label="Undo">↶<span class="btn-label"> Undo</span></button>
+        <button id="redo" type="button" disabled title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷<span class="btn-label"> Redo</span></button>
+        <button id="more-button" type="button" class="more-button" aria-expanded="false" aria-controls="toolbar-more" aria-label="More: theme name, type, new and import">☰</button>
+        <button id="export" type="button" class="primary">Export<span class="btn-label"> zip</span></button>
       </div>
     </header>
     <main class="app">
@@ -40,7 +45,7 @@
             <label><input type="radio" name="click-mode" value="move" checked /> Move things</label>
             <label><input type="radio" name="click-mode" value="touch" /> Use the menu</label>
           </div>
-          <label class="advanced-only">Size
+          <label class="advanced-only sizing">Size
             <select id="preview-size">
               <option value="fit" selected>Fit</option>
               <option value="sharp">Sharp (whole pixels)</option>
@@ -50,7 +55,7 @@
               <option value="4">4×</option>
             </select>
           </label>
-          <label class="advanced-only">Screens
+          <label class="advanced-only sizing">Screens
             <select id="preview-layout">
               <option value="stacked" selected>Stacked</option>
               <option value="auto">Auto</option>
@@ -109,13 +114,18 @@
           <summary>How to use the preview</summary>
           <p><strong>Clicks: Move things</strong> lets you click or tap something, like the clock or a button, to move it. Drag the round handle (or use the arrow keys; Shift moves 8 pixels). Things with a width and height also get a corner handle to resize them. Press the tick, or just click the next thing you want to move; Esc puts it back. The game list still responds to taps. To move the start menu, open it with the START button below the screens (or Space), then click it.</p>
           <p><strong>Clicks: Use the menu</strong> makes the bottom screen a touchscreen, just like the DS: every button can be tapped.</p>
-          <p>In either mode you can use the buttons under the screens, or click the screens and use the keyboard: arrows, X or Enter for A, Z or Esc for B, S for X, A for Y, Q and W for L and R, Space for START, Shift for SELECT.</p>
+          <p class="keys-help">In either mode you can use the buttons under the screens, or click the screens and use the keyboard: arrows, X or Enter for A, Z or Esc for B, S for X, A for Y, Q and W for L and R, Space for START, Shift for SELECT.</p>
           <p>It’s drawn the way AKMenu-Next draws it. Game icons, covers and your DS name are stand-ins.</p>
         </details>
         <ul id="preview-notes" aria-label="Preview notes"></ul>
       </section>
       <aside id="panels" aria-label="Theme settings"></aside>
     </main>
+    <!-- Touch layout on small screens: switch between the big preview and the settings. -->
+    <nav id="touch-nav" class="touch-nav" aria-label="View">
+      <button type="button" data-view="preview">Preview</button>
+      <button type="button" data-view="edit">Edit</button>
+    </nav>
     <dialog id="export-check" aria-labelledby="export-check-title">
       <h2 id="export-check-title">Before you export</h2>
       <div id="export-check-body"></div>

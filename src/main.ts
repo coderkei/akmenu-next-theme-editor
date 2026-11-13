@@ -519,19 +519,28 @@ function saveView() {
  */
 function applySize() {
   const dpr = window.devicePixelRatio || 1;
-  const stacked = matchMedia('(max-width: 900px)').matches;
+  const narrow = matchMedia('(max-width: 900px)').matches;
+  // The touch layout on a small screen: a big preview, or a small one above the settings.
+  const compact = touchLayout && narrow;
+  const mini = compact && touchView === 'edit' && matchMedia('(orientation: portrait)').matches;
   const availW = stageScreens.clientWidth - 24;
-  const availH = (stacked ? window.innerHeight * 0.8 : stageScreens.clientHeight) - 8;
+  const availH =
+    (mini ? window.innerHeight * 0.3
+      : compact ? (touchView === 'preview' ? window.innerHeight * 0.7 : stageScreens.clientHeight)
+      : narrow ? window.innerHeight * 0.8
+      : stageScreens.clientHeight) - 8;
   const frame = 20; // the DS frame's padding on both sides
   const gap = 10; // between the screens
   const fitFor = (side: boolean) =>
     side
       ? Math.min((availW - frame - gap) / (SCREEN_W * 2), (availH - frame) / SCREEN_H)
       : Math.min((availW - frame) / SCREEN_W, (availH - frame - gap) / (SCREEN_H * 2));
-  const side = layoutSelect.value === 'side' || (layoutSelect.value === 'auto' && fitFor(true) > fitFor(false));
+  // The touch layout picks for you: side by side when small, otherwise whichever is bigger.
+  const layout = mini ? 'side' : compact ? 'auto' : layoutSelect.value;
+  const side = layout === 'side' || (layout === 'auto' && fitFor(true) > fitFor(false));
   const fit = Math.max(fitFor(side), 0.25);
   let scale: number;
-  if (sizeSelect.value === 'fit') scale = fit;
+  if (sizeSelect.value === 'fit' || compact) scale = fit;
   else if (sizeSelect.value === 'sharp') scale = Math.floor(fit * dpr) >= 1 ? Math.floor(fit * dpr) / dpr : fit;
   else scale = Math.max(1, Math.round(Number(sizeSelect.value) * dpr)) / dpr;
   dsFrame.classList.toggle('side', side);
@@ -564,6 +573,90 @@ for (const i of modeInputs) {
   });
 }
 applyMode();
+
+// ------------------------------------------------------------- touch layout
+
+// Phones and tablets get bigger buttons, a gamepad under the screens and, on small
+// screens, a Preview / Edit switch at the bottom. Anyone can swap layouts by hand.
+const LAYOUT_STORE = 'aktheme.layout';
+const layoutToggle = $<HTMLButtonElement>('#layout-toggle');
+const moreButton = $<HTMLButtonElement>('#more-button');
+const toolbarMore = $<HTMLDivElement>('#toolbar-more');
+
+/** A phone or tablet: a touch screen and no mouse, or a browser that says it's mobile. */
+function looksLikeTouchDevice() {
+  const nav = navigator as Navigator & { userAgentData?: { mobile?: boolean } };
+  if (nav.userAgentData?.mobile) return true;
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(nav.userAgent)) return true;
+  // iPadOS says it's a Mac, but Macs don't have touch screens.
+  if (/Macintosh/.test(nav.userAgent) && nav.maxTouchPoints > 1) return true;
+  return matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;
+}
+
+function storedLayout(): boolean {
+  try {
+    const l = localStorage.getItem(LAYOUT_STORE);
+    if (l === 'touch' || l === 'desktop') return l === 'touch';
+  } catch {
+    // Storage blocked: go by the device.
+  }
+  return looksLikeTouchDevice();
+}
+
+let touchLayout = storedLayout();
+/** On small screens in the touch layout: the big preview, or the settings with a small one. */
+let touchView: 'preview' | 'edit' = 'edit';
+
+function applyLayout() {
+  document.body.classList.toggle('touch', touchLayout);
+  document.body.dataset.view = touchView;
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#touch-nav button')) b.setAttribute('aria-pressed', String(b.dataset.view === touchView));
+  layoutToggle.textContent = touchLayout ? 'Use the desktop layout' : 'Touch layout';
+  // Only offered where touch makes sense: touch devices and touch-screen computers.
+  layoutToggle.hidden = !touchLayout && navigator.maxTouchPoints === 0;
+  closeMore();
+  applySize();
+}
+
+function closeMore() {
+  toolbarMore.classList.remove('open');
+  moreButton.setAttribute('aria-expanded', 'false');
+}
+
+moreButton.addEventListener('click', () => {
+  const open = toolbarMore.classList.toggle('open');
+  moreButton.setAttribute('aria-expanded', String(open));
+});
+document.addEventListener('click', (e) => {
+  if (toolbarMore.classList.contains('open') && !toolbarMore.contains(e.target as Node) && !moreButton.contains(e.target as Node)) closeMore();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && toolbarMore.classList.contains('open')) {
+    closeMore();
+    moreButton.focus();
+  }
+});
+// New and Import open something else, so the menu can go.
+for (const b of toolbarMore.querySelectorAll('button')) b.addEventListener('click', () => b !== layoutToggle && closeMore());
+
+layoutToggle.addEventListener('click', () => {
+  touchLayout = !touchLayout;
+  try {
+    localStorage.setItem(LAYOUT_STORE, touchLayout ? 'touch' : 'desktop');
+  } catch {
+    // Not remembered; that's fine.
+  }
+  applyLayout();
+  say(touchLayout ? 'Touch layout: bigger buttons, made for fingers.' : 'Desktop layout.');
+});
+
+for (const b of document.querySelectorAll<HTMLButtonElement>('#touch-nav button')) {
+  b.addEventListener('click', () => {
+    touchView = b.dataset.view as typeof touchView;
+    applyLayout();
+  });
+}
+applyLayout();
 new ResizeObserver(applySize).observe(stageScreens);
 window.addEventListener('resize', applySize);
 applySize();

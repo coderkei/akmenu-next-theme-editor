@@ -13,6 +13,10 @@
         <span class="tagline">AKMenu-Next, Wood R4 &amp; Acekard theme editor</span>
       </div>
       <div class="toolbar">
+        <div class="mode-switch editor-mode" role="radiogroup" aria-label="Editor mode">
+          <label title="Just the main things: pictures, colours and what shows on the screens"><input type="radio" name="editor-mode" value="simple" /> Simple</label>
+          <label title="Every setting, size and picture"><input type="radio" name="editor-mode" value="advanced" /> Advanced</label>
+        </div>
         <label>Theme name <input id="theme-name" value="My Theme" /></label>
         <label>Theme type
           <select id="flavour">
@@ -36,7 +40,7 @@
             <label><input type="radio" name="click-mode" value="move" checked /> Move things</label>
             <label><input type="radio" name="click-mode" value="touch" /> Use the menu</label>
           </div>
-          <label>Size
+          <label class="advanced-only">Size
             <select id="preview-size">
               <option value="fit" selected>Fit</option>
               <option value="sharp">Sharp (whole pixels)</option>
@@ -46,16 +50,16 @@
               <option value="4">4×</option>
             </select>
           </label>
-          <label>Screens
+          <label class="advanced-only">Screens
             <select id="preview-layout">
               <option value="stacked" selected>Stacked</option>
               <option value="auto">Auto</option>
               <option value="side">Side by side</option>
             </select>
           </label>
-          <label class="check" title="Bilinear filtering: softer, like some emulators"><input type="checkbox" id="smooth" /> Smooth</label>
+          <label class="check advanced-only" title="Bilinear filtering: softer, like some emulators"><input type="checkbox" id="smooth" /> Smooth</label>
           <button id="screenshot" type="button" title="Save both screens as a picture">Screenshot</button>
-          <details class="more-options">
+          <details class="more-options advanced-only">
             <summary>Preview options</summary>
             <div class="more-panel">
               <label>Console

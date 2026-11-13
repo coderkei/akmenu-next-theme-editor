@@ -7,7 +7,7 @@ import { checkMusic, isMusicPath, nextMusicPath, type MusicInfo } from './format
 import { loadMenuBitmap } from './preview/menubmp';
 import { CUSTOM_PICTURE, CUSTOM_PICTURE_MAX_BYTES, ICON_LABELS, IMAGE_SLOTS, MUSIC, NEXT_ONLY_PATHS, SCHEMA, THEME_ICONS, type Flavour, type ImageSlot, type KeyDef, type SectionDef, type ThemeFile } from './schema';
 import { BANNER_BYTES, decodeBannerIcon, encodeBannerIcon } from './formats/banner';
-import { CARDS, TABS, type CardDef, type CardPart, type TabId } from './schema/layout';
+import { layoutFor, type CardDef, type CardPart, type EditorMode, type TabId } from './schema/layout';
 import { customPicturePath, type Theme } from './theme';
 
 export interface PanelHost {
@@ -21,18 +21,24 @@ export interface PanelHost {
   say(message: string): void;
   /** The menu's own icon for an icons/ path, once loaded. */
   stockIcon(path: string): Uint8Array | undefined;
+  /** Simple shows a few friendly cards; Advanced shows everything. */
+  mode(): EditorMode;
+  /** Switches the whole editor to the other mode. */
+  switchMode(mode: EditorMode): void;
 }
 
-const TAB_STORE = 'aktheme.settingsTab';
+/** Each mode remembers its own tab. */
+const TAB_STORE: Record<EditorMode, string> = { advanced: 'aktheme.settingsTab', simple: 'aktheme.simpleTab' };
 
-function storedTab(): TabId {
+function storedTab(mode: EditorMode): TabId {
+  const { tabs } = layoutFor(mode);
   try {
-    const t = localStorage.getItem(TAB_STORE) as TabId | null;
-    if (t && TABS.some((x) => x.id === t)) return t;
+    const t = localStorage.getItem(TAB_STORE[mode]) as TabId | null;
+    if (t && tabs.some((x) => x.id === t)) return t;
   } catch {
     // Storage blocked: start on the first tab.
   }
-  return TABS[0].id;
+  return tabs[0].id;
 }
 
 /** document.createElement with properties (e.g. className, value) and children. */
@@ -46,8 +52,10 @@ let uid = 0;
 const nextId = (base: string) => `${base.replace(/\W+/g, '-')}-${++uid}`;
 
 export function createPanels(container: HTMLElement, host: PanelHost) {
-  let activeTab = storedTab();
+  let builtMode = host.mode();
+  let activeTab = storedTab(builtMode);
   let query = '';
+  const simple = () => host.mode() === 'simple';
 
   const docFor = (file: ThemeFile) => (file === 'custom.ini' ? host.theme().custom : host.theme().uisettings);
   const sectionDef = (part: CardPart) => SCHEMA.find((s) => s.file === part.file && s.section === part.section)!;
@@ -142,7 +150,10 @@ export function createPanels(container: HTMLElement, host: PanelHost) {
 
   function partFields(part: CardPart): HTMLElement {
     const s = sectionDef(part);
-    const keys = s.keys.filter((k) => !part.keys || part.keys.includes(k.key));
+    // Simple cards can give a key a friendlier label, and leave out the technical help.
+    const keys = s.keys
+      .filter((k) => !part.keys || part.keys.includes(k.key))
+      .map((k) => ({ ...k, label: part.labels?.[k.key] ?? k.label, help: simple() ? undefined : k.help }));
     const box = el('div', { className: 'part' });
     if (part.heading) box.append(el('h4', { textContent: part.heading }));
     const by = (key: string) => keys.find((k) => k.key === key);
@@ -576,7 +587,7 @@ export function createPanels(container: HTMLElement, host: PanelHost) {
   function selectTab(id: TabId, focus = false) {
     activeTab = id;
     try {
-      localStorage.setItem(TAB_STORE, id);
+      localStorage.setItem(TAB_STORE[builtMode], id);
     } catch {
       // Not remembered; that's fine.
     }
@@ -611,6 +622,12 @@ export function createPanels(container: HTMLElement, host: PanelHost) {
   }
 
   function build() {
+    if (builtMode !== host.mode()) {
+      builtMode = host.mode();
+      activeTab = storedTab(builtMode);
+      query = '';
+    }
+    const { tabs, cards: allCards } = layoutFor(builtMode);
     container.replaceChildren();
     const search = el('input', { type: 'search', id: 'settings-search', value: query, placeholder: 'Find a setting, e.g. clock, colour, start' });
     search.addEventListener('input', () => {
@@ -623,8 +640,8 @@ export function createPanels(container: HTMLElement, host: PanelHost) {
     tablist.setAttribute('aria-label', 'Theme settings');
     tabButtons = [];
     tabPanels = [];
-    for (const tab of TABS) {
-      const cards = CARDS.filter((c) => c.tab === tab.id && cardShown(c));
+    for (const tab of tabs) {
+      const cards = allCards.filter((c) => c.tab === tab.id && cardShown(c));
       if (!cards.length) continue;
       const tabId = `tab-${tab.id}`;
       const panelId = `panel-${tab.id}`;
@@ -658,22 +675,31 @@ export function createPanels(container: HTMLElement, host: PanelHost) {
     });
     if (!tabButtons.some((b) => b.dataset.tab === activeTab)) activeTab = tabButtons[0].dataset.tab as TabId;
     emptyNote = el('p', { className: 'no-results' });
-    // The search box and tabs stay at the top while the cards scroll.
+    // The search box and tabs stay at the top while the cards scroll. Simple mode has
+    // so few cards that it doesn't need the search.
     const head = el(
       'div',
       { className: 'settings-head' },
-      el('div', { className: 'settings-search' }, el('label', { htmlFor: 'settings-search', className: 'visually-hidden', textContent: 'Find a setting' }), search),
+      ...(simple() ? [] : [el('div', { className: 'settings-search' }, el('label', { htmlFor: 'settings-search', className: 'visually-hidden', textContent: 'Find a setting' }), search)]),
       // Said once here rather than on every card that can be moved.
       el('p', { className: 'tip', textContent: 'Tip: to move something, click it on the preview and drag the handle.' }),
       tablist,
     );
+    container.classList.toggle('simple', simple());
     container.append(head, ...tabPanels, emptyNote);
+    if (simple()) {
+      const more = el('button', { type: 'button', textContent: 'Switch to Advanced' });
+      more.addEventListener('click', () => host.switchMode('advanced'));
+      container.append(
+        el('p', { className: 'mode-note' }, 'Want to change sizes, the clock digits, buttons and every other picture? ', more, ' Your theme stays just as it is.'),
+      );
+    }
     applyView();
   }
 
   /** Opens the card for an INI section and briefly highlights it. */
   function reveal(file: ThemeFile, section: string) {
-    const card = CARDS.find((c) => c.parts.some((p) => p.file === file && p.section === section));
+    const card = layoutFor(builtMode).cards.find((c) => c.parts.some((p) => p.file === file && p.section === section));
     if (!card) return;
     query = '';
     const search = container.querySelector<HTMLInputElement>('#settings-search');

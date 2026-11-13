@@ -8,12 +8,35 @@ import { elementAt, sameElement, savePosition, sectionLabel, setPosition, setSiz
 import { loadWork, saveWorkSoon } from './autosave';
 import { History, restoreSnapshot, snapshot } from './history';
 import { createPanels } from './panels';
+import type { EditorMode } from './schema/layout';
 import type { Flavour, ThemeFile } from './schema';
 import { checkTheme, type Issue } from './checks';
 import { exportThemeZip, importThemeZip, newTheme, syncCustomPicturePath, themeFolder, type Theme } from './theme';
 
 let theme: Theme = newTheme();
 let flavour: Flavour = 'next';
+
+// ------------------------------------------------------------- editor mode
+
+const MODE_STORE = 'aktheme.editorMode';
+const editorModeInputs = [...document.querySelectorAll<HTMLInputElement>('input[name="editor-mode"]')];
+
+/**
+ * Simple for newcomers. People who used the editor before there was a choice (they have
+ * a remembered settings tab) keep the full editor they know.
+ */
+function storedEditorMode(): EditorMode {
+  try {
+    const m = localStorage.getItem(MODE_STORE);
+    if (m === 'simple' || m === 'advanced') return m;
+    if (localStorage.getItem('aktheme.settingsTab')) return 'advanced';
+  } catch {
+    // Storage blocked: start simple.
+  }
+  return 'simple';
+}
+
+let editorMode: EditorMode = storedEditorMode();
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 const topCtx = $<HTMLCanvasElement>('#screen-top').getContext('2d')!;
@@ -34,7 +57,29 @@ const panels = createPanels($<HTMLDivElement>('#panels'), {
   },
   say,
   stockIcon: (path) => stockIcons?.get(path),
+  mode: () => editorMode,
+  switchMode: (mode) => setEditorMode(mode),
 });
+
+function applyEditorMode() {
+  document.body.classList.toggle('simple', editorMode === 'simple');
+  for (const i of editorModeInputs) i.checked = i.value === editorMode;
+}
+
+function setEditorMode(mode: EditorMode) {
+  editorMode = mode;
+  try {
+    localStorage.setItem(MODE_STORE, mode);
+  } catch {
+    // Not remembered; that's fine.
+  }
+  applyEditorMode();
+  panels.build();
+  say(mode === 'simple' ? 'Simple mode: just the main things. Switch to Advanced any time for every setting.' : 'Advanced mode: every setting, size and picture.');
+}
+
+for (const i of editorModeInputs) i.addEventListener('change', () => i.checked && setEditorMode(i.value as EditorMode));
+applyEditorMode();
 
 // ------------------------------------------------------------------ preview
 

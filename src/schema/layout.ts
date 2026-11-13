@@ -5,7 +5,10 @@
 
 import type { ThemeFile } from './index';
 
-export type TabId = 'backgrounds' | 'clock' | 'text' | 'cover' | 'list' | 'buttons' | 'startmenu' | 'windows' | 'music';
+export type TabId = 'backgrounds' | 'clock' | 'text' | 'cover' | 'list' | 'buttons' | 'startmenu' | 'windows' | 'music' | 'colours' | 'topscreen' | 'icons';
+
+/** Simple shows a few friendly cards; Advanced shows every setting. */
+export type EditorMode = 'simple' | 'advanced';
 
 export interface TabDef {
   id: TabId;
@@ -32,6 +35,8 @@ export interface CardPart {
   keys?: string[];
   /** A small heading when a card has more than one part. */
   heading?: string;
+  /** Friendlier labels for some keys, by key name (used by the simple layout). */
+  labels?: Record<string, string>;
 }
 
 export interface CardDef {
@@ -171,3 +176,104 @@ export const CARDS: CardDef[] = [
   },
   { id: 'help-window', tab: 'windows', label: 'Window sizes', description: 'How big some windows are.', parts: [ui('help window', undefined, 'Help and About'), ui('rom info window', undefined, 'File Info')] },
 ];
+
+// ------------------------------------------------------------------ simple
+
+// The simple layout: the handful of things most people change (pictures, colours,
+// what shows on the top screen, icons and music). Everything here is also in the
+// advanced layout above; layout.test.ts checks the keys and pictures are real.
+// Positions and sizes are left to dragging things on the preview.
+
+export const SIMPLE_TABS: TabDef[] = [
+  { id: 'backgrounds', label: 'Pictures', intro: 'Start here: pick a picture for each screen. Any picture works; it’s resized to fit the DS for you.' },
+  { id: 'colours', label: 'Colours', intro: 'The colours of the text and the selection bars.' },
+  { id: 'topscreen', label: 'Top screen', intro: 'Choose what shows on the top screen. To move something, click it on the preview and drag it.' },
+  { id: 'icons', label: 'Icons', intro: 'The little pictures next to each game and folder.' },
+  { id: 'music', label: 'Music', intro: 'Background music that plays while the menu is open.' },
+];
+
+export const SIMPLE_CARDS: CardDef[] = [
+  {
+    id: 'screens',
+    tab: 'backgrounds',
+    label: 'Screen pictures',
+    description: 'Pure black turns see-through on the DS, so you’ll be offered a fix if your picture has any.',
+    parts: [],
+    images: ['upper_screen.bmp', 'lower_screen.bmp'],
+  },
+  {
+    id: 'file-list',
+    tab: 'colours',
+    label: 'Game list',
+    description: 'The list of games on the bottom screen. The selected game gets a bar striped from two colours.',
+    parts: [ui('main list', ['textColor', 'textColorHilight', 'selectionBarColor1', 'selectionBarColor2'])],
+  },
+  {
+    id: 'start-menu',
+    tab: 'colours',
+    label: 'Start menu',
+    description: 'The menu that opens from the START button.',
+    parts: [ui('global settings', ['popMenuTextColor', 'popMenuTextHighLightColor', 'popMenuBarColor'])],
+  },
+  {
+    id: 'windows',
+    tab: 'colours',
+    label: 'Windows',
+    description: 'Messages, Settings, Help and so on.',
+    parts: [ui('global settings', ['formBodyColor', 'formFrameColor', 'formTitleTextColor', 'formTextColor', 'buttonTextColor'])],
+  },
+  {
+    id: 'clock',
+    tab: 'topscreen',
+    label: 'Clock',
+    description: 'A big digital clock.',
+    parts: [{ ...ui('big clock', ['show']), labels: { show: 'Show the clock' } }],
+  },
+  {
+    id: 'calendar',
+    tab: 'topscreen',
+    label: 'Calendar',
+    description: 'This month’s days, plus today’s date, month and year.',
+    parts: [
+      { ...ui('calendar day', ['show', 'highlightColor']), labels: { show: 'Days of the month' } },
+      { ...ui('calendar dayx', ['show']), labels: { show: 'Today’s date' } },
+      { ...ui('calendar month', ['show']), labels: { show: 'Month' } },
+      { ...ui('calendar year', ['show']), labels: { show: 'Year' } },
+    ],
+  },
+  {
+    id: 'username',
+    tab: 'topscreen',
+    label: 'Your DS name',
+    description: 'The name set on the DS.',
+    parts: [{ ...custom('user name'), keys: ['show', 'color'], labels: { show: 'Show your DS name' } }],
+  },
+  {
+    id: 'date',
+    tab: 'topscreen',
+    label: 'Date and time',
+    description: 'Today’s date, and the time if you like.',
+    parts: [{ ...custom('date'), keys: ['show', 'color', 'format', 'showTime'], labels: { show: 'Show the date' } }],
+  },
+  {
+    id: 'icons',
+    tab: 'icons',
+    label: 'Icons',
+    description: 'Click an icon to use your own picture. Ones you don’t set use the menu’s own.',
+    parts: [],
+    icons: true,
+  },
+  {
+    id: 'music',
+    tab: 'music',
+    label: 'Theme music',
+    description: 'Add WAV or BCSTM files. Each time the menu starts it picks one at random to play.',
+    parts: [],
+    music: true,
+  },
+];
+
+/** The tabs and cards for an editor mode. */
+export function layoutFor(mode: EditorMode): { tabs: TabDef[]; cards: CardDef[] } {
+  return mode === 'simple' ? { tabs: SIMPLE_TABS, cards: SIMPLE_CARDS } : { tabs: TABS, cards: CARDS };
+}
